@@ -12,29 +12,35 @@ def get_args():
     return parser.parse_args()
     
     
-def process_post(post_url, no_context):
+def parse_labels(soup, labels_file):
+    label_soup = soup.find("span", {"class": "notes_headline_inner"})
+    index_date, labels = list(label_soup)[1:3]
+    index, date = index_date.find(text=True).split(" - ")
+    _, coarse, _, fine, _, color, _, object = labels.findAll(text=True)
+    coarse, fine, color, object = coarse[2:], fine[2:], color[2:], object[2:]
+    labels_file.write("{},{},".format(index,date))
+    labels_file.write("{},{},{},{}\n".format(coarse, fine, color, object))
+    return index
+    
+    
+def process_post(post_url, labels_file, no_context):
     html_text = requests.get(post_url).text
     soup = bs(html_text, features = "html.parser")
-    image_scratcher(soup, no_context)
+
+    image_scratcher(soup, labels_file, no_context)
     next = soup.find("span", {"class": "next_cell"})
     if next:
         post_url = next.previous_element["href"]
         return post_url
         
         
-def image_scratcher(soup, no_context):
-    if "counter" not in image_scratcher.__dict__:
-        image_scratcher.counter = 0
-    image_scratcher.counter += 1
-    
-    img = soup.find("img", {"class": "notPhotoset"})
-    img_url = img["src"]
-    name = img_url.split("/")[-1]
-    urllib.request.urlretrieve(img_url, "surfaces/{}.jpg".format(image_scratcher.counter))
+def image_scratcher(soup, labels_file, no_context):
+    index = parse_labels(soup, labels_file)
+    img_url = soup.find("img", {"class": "notPhotoset"})["src"]
+    urllib.request.urlretrieve(img_url, "surfaces/{}.jpg".format(index))
     if not no_context:
-        context = soup.find("figure", {"class": "tmblr-full"}).find("img")
-        context_url = context["src"]
-        urllib.request.urlretrieve(context_url, "contexts/{}.jpg".format(image_scratcher.counter))
+        context_url = soup.find("figure", {"class": "tmblr-full"}).find("img")["src"]
+        urllib.request.urlretrieve(context_url, "contexts/{}.jpg".format(index))
         
         
 def init_directories():
@@ -46,11 +52,15 @@ def init_directories():
         
 def scratch(no_context):
     post_url = "https://scratchthesurface.tumblr.com/post/635159455418466304/scratch-the-surface-1-18nov2020-coarse"
-    next = process_post(post_url, no_context)
+    labels_file = open("labels.csv", "w")
+    labels_file.write("index,date,coarse taxonomy,fine taxonomy,color,object\n")
+    next = process_post(post_url, labels_file, no_context)
     while next:
-        next = process_post(next, no_context)
+        next = process_post(next, labels_file, no_context)
+    labels_file.close()
         
-def update():
+
+def update(no_context):
     pass
     
 
