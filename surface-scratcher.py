@@ -19,7 +19,7 @@ def parse_labels(soup):
     index, date = index_date.find(text=True).split(" - ")
     _, coarse, _, fine, _, color, _, object = labels.findAll(text=True)
     coarse, fine, color, object = coarse[2:], fine[2:], color[2:], object[2:]
-    return index,date,coarse,fine,color,object
+    return int(index),date,coarse,fine,color,object
     
     
 def image_scratcher(soup, index, no_context):
@@ -45,6 +45,7 @@ def process_post(post_url, no_context):
     soup = bs(html_text, features = "html.parser")
 
     index,date,coarse,fine,color,object = parse_labels(soup)
+    print(" downloading post", index)
     image_scratcher(soup, index, no_context)
     next = soup.find("span", {"class": "prev_cell"})
     if next:
@@ -59,12 +60,14 @@ def init_directories():
     if not os.path.isdir("contexts"):
         os.mkdir("contexts")
         
+        
 def append_dataframe(labels,row_data):
     row = pd.DataFrame([row_data], columns=labels.columns)
     return pd.concat([labels,row])
         
         
-def scratch(no_context):
+def scratch_surfaces(no_context):
+    print("Scratching surfaces...")
     post_url = get_last_post()
     labels = pd.DataFrame({"index":[],"date":[],"coarse taxonomy":[],"fine taxonomy":[],"color":[],"object":[]})
     try:
@@ -76,14 +79,33 @@ def scratch(no_context):
             next,row_data = data[0],data[1:]
             labels = append_dataframe(labels,row_data)
     finally:
-        labels.to_csv("labels.csv", index=False)
-    labels_file.close()
+        labels = labels.sort_values("index", ascending = False)
+        labels.to_csv("labels.csv", index = False)
+    print("done!")
         
 
-def update(no_context):
-    pass
-
-
+def update_surfaces(no_context):
+    assert os.path.isfile("labels.csv"), "update: no labels.csv file found. Download the dataset before upading, like so: python3 surface-scratcher.py"
+    print("Updating surfaces...")
+    labels = pd.read_csv("labels.csv")
+    max_index = labels["index"].max()
+    post_url = get_last_post()
+    try:
+        data = process_post(post_url, no_context)
+        next,row_data = data[0],data[1:]
+        index = row_data[0]
+        if index > max_index:
+            labels = append_dataframe(labels,row_data)
+            while index > max_index+1:
+                data = process_post(next, no_context)
+                next,row_data = data[0],data[1:]
+                labels = append_dataframe(labels,row_data)
+                index = row_data[0]
+    finally:
+        labels = labels.sort_values("index", ascending = False)
+        labels.to_csv("labels.csv", index = False)
+    print("done!")        
+        
 
 if __name__ == "__main__":
     args = get_args()
@@ -91,8 +113,8 @@ if __name__ == "__main__":
     
     init_directories()
     if update:
-        update(no_context)
+        update_surfaces(no_context)
     else:
-        scratch(no_context)
+        scratch_surfaces(no_context)
 
     
