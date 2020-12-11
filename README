@@ -24,9 +24,9 @@ If you wanted a labeled collection of surfaces to train a classifier, to texturi
 
 Download images, contexts and labels:
 
-````
+```
 python3 surface-scratcher.py
-````
+```
 
 I try to upload a new surface everyday, so if you want to keep your local dataset up to date, you can do as follows:
 
