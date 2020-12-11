@@ -1,6 +1,5 @@
 from bs4 import BeautifulSoup as bs
 import pandas as pd
-import urllib.request
 import argparse
 import requests
 import os
@@ -14,6 +13,18 @@ def get_args():
     
     
 def parse_labels(soup):
+    '''
+    Argument:
+        soup: bs4.BeautifulSoup with a scratchthesurface post
+    Output:
+        tuple with 6 elements:
+            integer - post index
+            string - post date
+            string - surface coarse taxonomy
+            string - surface fine taxonomy
+            string - surface color
+            string - object description
+    '''
     label_soup = soup.find("span", {"class": "notes_headline_inner"})
     index_date, labels = list(label_soup)[1:3]
     index, date = index_date.find(text=True).split(" - ")
@@ -23,6 +34,16 @@ def parse_labels(soup):
     
     
 def image_scratcher(soup, index, no_context):
+    '''
+    Behaviour:
+        Downloads the post images and saves in the respective folder (surfaces or contexts)
+    Argument:
+        soup: bs4.BeautifulSoup with a scratchthesurface post
+        index: integer with the post index
+        no_context: boolean, when 0 download the context image, else don't
+    Output:
+        None
+    '''
     img_url = soup.find("img", {"class": "notPhotoset"})["src"]
     urllib.request.urlretrieve(img_url, "surfaces/{}.jpg".format(index))
     if not no_context:
@@ -31,6 +52,12 @@ def image_scratcher(soup, index, no_context):
         
         
 def get_last_post():
+    '''
+    Argument:
+        None
+    Output:
+        string - the url of the most recent scratchthesurface post 
+    '''
     tumblr_url = "https://scratchthesurface.tumblr.com"
     html_text = requests.get(tumblr_url).text
     soup = bs(html_text, features = "html.parser")
@@ -41,16 +68,33 @@ def get_last_post():
     
     
 def process_post(post_url, no_context):
+    '''
+    Behaviour:
+        Downloads the post images, saves in the respective folder (surfaces or contexts)
+        and returns the post labels 
+    Argument:
+        post_url: string with the url of the scratchthesurface post to be processed
+        no_context: boolean, when 0 download the context image, else don't
+    Output:
+        tuple with 6 elements:
+            string or None - string with the url of the previous post or None if post_url is 
+                the first post
+            integer - post index
+            string - post date
+            string - surface coarse taxonomy
+            string - surface fine taxonomy
+            string - surface color
+            string - object description
+    '''
     html_text = requests.get(post_url).text
     soup = bs(html_text, features = "html.parser")
 
     index,date,coarse,fine,color,object = parse_labels(soup)
     print(" downloading post", index)
     image_scratcher(soup, index, no_context)
-    next = soup.find("span", {"class": "prev_cell"})
-    if next:
-        post_url = next.previous_element["href"]
-        return post_url,index,date,coarse,fine,color,object
+    prev = soup.find("span", {"class": "prev_cell"})
+    if prev:
+        return prev.previous_element["href"],index,date,coarse,fine,color,object
     return None,index,date,coarse,fine,color,object
         
         
@@ -67,6 +111,14 @@ def append_dataframe(labels,row_data):
         
         
 def scratch_surfaces(no_context):
+    '''
+    Behaviour:
+        Downloads post images and labels from the new to old
+    Argument:
+        no_context: boolean, when 0 download the context image, else don't
+    Output:
+        None
+    '''
     print("Scratching surfaces...")
     post_url = get_last_post()
     labels = pd.DataFrame({"index":[],"date":[],"coarse taxonomy":[],"fine taxonomy":[],"color":[],"object":[]})
@@ -79,12 +131,22 @@ def scratch_surfaces(no_context):
             next,row_data = data[0],data[1:]
             labels = append_dataframe(labels,row_data)
     finally:
+        labels["index"] = labels["index"].astype(int)
         labels = labels.sort_values("index", ascending = False)
         labels.to_csv("labels.csv", index = False)
     print("done!")
         
 
 def update_surfaces(no_context):
+    '''
+    Behaviour:
+        Downloads post images and labels from the new to old until the last downloaded post.
+        Usefull when your local dataset doesn't contain newly added surfaces to scratchthesurface.tumblr.com
+    Argument:
+        no_context: boolean, when 0 download the context image, else don't
+    Output:
+        None
+    '''
     assert os.path.isfile("labels.csv"), "update: no labels.csv file found. Download the dataset before upading, like so: python3 surface-scratcher.py"
     print("Updating surfaces...")
     labels = pd.read_csv("labels.csv")
@@ -102,6 +164,7 @@ def update_surfaces(no_context):
                 labels = append_dataframe(labels,row_data)
                 index = row_data[0]
     finally:
+        labels["index"] = labels["index"].astype(int)
         labels = labels.sort_values("index", ascending = False)
         labels.to_csv("labels.csv", index = False)
     print("done!")        
