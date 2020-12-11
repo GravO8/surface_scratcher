@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup as bs
 import pandas as pd
 import argparse
 import requests
+import urllib
 import os
 
 
@@ -132,7 +133,7 @@ def scratch_surfaces(no_context):
             labels = append_dataframe(labels,row_data)
     finally:
         labels["index"] = labels["index"].astype(int)
-        labels = labels.sort_values("index", ascending = False)
+        labels = labels.sort_values("index")
         labels.to_csv("labels.csv", index = False)
     print("done!")
         
@@ -165,7 +166,7 @@ def update_surfaces(no_context):
                 index = row_data[0]
     finally:
         labels["index"] = labels["index"].astype(int)
-        labels = labels.sort_values("index", ascending = False)
+        labels = labels.sort_values("index")
         labels.to_csv("labels.csv", index = False)
     print("done!")        
         
