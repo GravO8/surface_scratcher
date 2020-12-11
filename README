@@ -2,7 +2,7 @@
 
 Download images and labels from *[scratch the surface](https://scratchthesurface.tumblr.com/)*.
 
-<img src="https://user-images.githubusercontent.com/25433159/101905119-d6dba800-3bae-11eb-8aa7-e7730865a85a.png" alt="scratch-the-surface" style="zoom:67%;" />
+![scratch-the-surface]("https://user-images.githubusercontent.com/25433159/101905119-d6dba800-3bae-11eb-8aa7-e7730865a85a.png")
 
 Scratch the surface is a blog I maintain with a **labeled collection of surfaces**.
 
@@ -40,7 +40,7 @@ Each surface has a context image, i.e. a photo of the object that contains said 
 python3 surface-scratcher.py --no_context
 ```
 
-This information is also available, doing so: `python3 halftone.py -h`
+This information is also available, doing so: `python3 surface-scratcher.py -h`
 
 # Output
 
